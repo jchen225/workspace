@@ -99,8 +99,9 @@ function createMarketCard(market, rank) {
     const priceChangeClass = priceChange > 0 ? 'positive' : priceChange < 0 ? 'negative' : '';
 
     // Get outcome prices (Yes/No)
+    // Note: outcomes and outcomePrices are already arrays from the API
     const outcomes = market.outcomes || ['Yes', 'No'];
-    const prices = market.outcomePrices ? market.outcomePrices.split(',') : ['0.5', '0.5'];
+    const prices = market.outcomePrices || ['0.5', '0.5'];
 
     card.innerHTML = `
         <div class="market-rank">#${rank}</div>
