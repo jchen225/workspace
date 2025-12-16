@@ -101,11 +101,26 @@ function getTrendingMarkets(markets, count = 10) {
             try {
                 // Essential requirements only
                 const hasValidSlug = market.slug && market.slug.length > 0;
-                const hasValidOutcomes = market.outcomes && Array.isArray(market.outcomes) && market.outcomes.length >= 2;
-                const hasValidPrices = market.outcomePrices && Array.isArray(market.outcomePrices) && market.outcomePrices.length >= 2;
 
-                // Check if any price values are non-zero (must be array first)
-                const hasNonZeroPrices = hasValidPrices && market.outcomePrices.some(p => parseFloat(p) > 0);
+                // Check outcomes - must be array with 2+ items
+                const hasValidOutcomes = market.outcomes &&
+                                        Array.isArray(market.outcomes) &&
+                                        market.outcomes.length >= 2;
+
+                // Check outcomePrices - must be array with 2+ items
+                if (!market.outcomePrices || !Array.isArray(market.outcomePrices)) {
+                    return false;
+                }
+                const hasValidPrices = market.outcomePrices.length >= 2;
+
+                // Check if any price values are non-zero (only call .some() if array confirmed)
+                let hasNonZeroPrices = false;
+                if (hasValidPrices) {
+                    hasNonZeroPrices = market.outcomePrices.some(p => {
+                        const num = parseFloat(p);
+                        return !isNaN(num) && num > 0;
+                    });
+                }
 
                 // Check volume
                 const volume = parseFloat(market.volume24hr);
@@ -272,7 +287,8 @@ async function loadTrendingMarkets() {
 
         console.log('Sorted by volume (descending):');
         trending.forEach((m, i) => {
-            console.log(`#${i+1}: ${m.question} - Volume: $${m.volume24hr.toFixed(2)} - Prices: ${m.outcomePrices.join(', ')}`);
+            const pricesDisplay = Array.isArray(m.outcomePrices) ? m.outcomePrices.join(', ') : 'N/A';
+            console.log(`#${i+1}: ${m.question} - Volume: $${m.volume24hr.toFixed(2)} - Prices: ${pricesDisplay}`);
         });
 
         markets = trending;
