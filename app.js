@@ -9,17 +9,23 @@ let useCorsProxy = false;
 
 // Utility Functions
 function formatCurrency(value) {
-    if (value >= 1000000) {
-        return `$${(value / 1000000).toFixed(2)}M`;
-    } else if (value >= 1000) {
-        return `$${(value / 1000).toFixed(1)}K`;
+    const num = parseFloat(value);
+    if (isNaN(num)) return '$0.00';
+
+    if (num >= 1000000) {
+        return `$${(num / 1000000).toFixed(2)}M`;
+    } else if (num >= 1000) {
+        return `$${(num / 1000).toFixed(1)}K`;
     }
-    return `$${value.toFixed(2)}`;
+    return `$${num.toFixed(2)}`;
 }
 
 function formatPrice(price) {
     // Prices are in format like "0.52" meaning 52%
-    const percentage = (parseFloat(price) * 100).toFixed(1);
+    const num = parseFloat(price);
+    if (isNaN(num)) return '0.0¢';
+
+    const percentage = (num * 100).toFixed(1);
     return `${percentage}¢`;
 }
 
@@ -85,8 +91,15 @@ async function fetchMarkets() {
 function getTrendingMarkets(markets, count = 10) {
     // Sort by 24-hour volume to get trending markets
     return markets
-        .filter(market => market.volume24hr > 0)
-        .sort((a, b) => b.volume24hr - a.volume24hr)
+        .filter(market => {
+            const volume = parseFloat(market.volume24hr);
+            return !isNaN(volume) && volume > 0;
+        })
+        .sort((a, b) => {
+            const volumeA = parseFloat(a.volume24hr);
+            const volumeB = parseFloat(b.volume24hr);
+            return volumeB - volumeA;
+        })
         .slice(0, count);
 }
 
@@ -103,6 +116,20 @@ function createMarketCard(market, rank) {
     const outcomes = market.outcomes || ['Yes', 'No'];
     const prices = market.outcomePrices || ['0.5', '0.5'];
 
+    // Debug logging
+    console.log(`Market: ${market.question}`);
+    console.log('Outcomes:', outcomes);
+    console.log('Prices:', prices);
+    console.log('Volume24hr:', market.volume24hr);
+
+    // Safely get outcome labels and prices
+    const outcome1Label = outcomes[0] || 'Yes';
+    const outcome2Label = outcomes[1] || 'No';
+    const price1 = prices[0] || '0.5';
+    const price2 = prices[1] || '0.5';
+
+    console.log('Formatted prices:', formatPrice(price1), formatPrice(price2));
+
     card.innerHTML = `
         <div class="market-rank">#${rank}</div>
         <div class="market-content">
@@ -118,12 +145,12 @@ function createMarketCard(market, rank) {
 
             <div class="outcomes">
                 <div class="outcome yes">
-                    <span class="outcome-label">${outcomes[0]}</span>
-                    <span class="outcome-price">${formatPrice(prices[0])}</span>
+                    <span class="outcome-label">${outcome1Label}</span>
+                    <span class="outcome-price">${formatPrice(price1)}</span>
                 </div>
                 <div class="outcome no">
-                    <span class="outcome-label">${outcomes[1]}</span>
-                    <span class="outcome-price">${formatPrice(prices[1])}</span>
+                    <span class="outcome-label">${outcome2Label}</span>
+                    <span class="outcome-price">${formatPrice(price2)}</span>
                 </div>
             </div>
 
@@ -206,6 +233,10 @@ async function loadTrendingMarkets() {
 
         const trending = getTrendingMarkets(allMarkets, 10);
         console.log('Top 10 trending markets:', trending);
+        console.log('Sorted by volume (descending):');
+        trending.forEach((m, i) => {
+            console.log(`#${i+1}: ${m.question} - Volume: ${m.volume24hr}`);
+        });
 
         if (trending.length === 0) {
             throw new Error('No trending markets found with volume data');
