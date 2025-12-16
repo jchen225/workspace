@@ -45,7 +45,8 @@ function getMarketUrl(slug) {
 
 // API Functions
 async function fetchMarkets() {
-    const url = `${API_BASE_URL}${MARKETS_ENDPOINT}?limit=100&closed=false`;
+    // Fetch more markets to ensure we find 10 valid ones after filtering
+    const url = `${API_BASE_URL}${MARKETS_ENDPOINT}?limit=200&closed=false`;
 
     try {
         console.log('Attempting to fetch from:', url);
@@ -93,25 +94,28 @@ async function fetchMarkets() {
 }
 
 function getTrendingMarkets(markets, count = 10) {
-    // Filter for live markets with valid data, then sort by 24-hour volume
-    return markets
+    // Filter for markets with essential valid data, then sort by 24-hour volume
+    // Be flexible - only require the essential fields we need to display the market
+    const validMarkets = markets
         .filter(market => {
-            // Check if market is live and active
-            const isActive = market.active === true;
-            const isClosed = market.closed === true;
+            // Essential requirements only
             const hasValidSlug = market.slug && market.slug.length > 0;
             const hasValidOutcomes = market.outcomes && Array.isArray(market.outcomes) && market.outcomes.length >= 2;
             const hasValidPrices = market.outcomePrices && Array.isArray(market.outcomePrices) && market.outcomePrices.length >= 2;
+
+            // Check if any price values are non-zero
+            const hasNonZeroPrices = market.outcomePrices &&
+                                     market.outcomePrices.some(p => parseFloat(p) > 0);
 
             // Check volume
             const volume = parseFloat(market.volume24hr);
             const hasVolume = !isNaN(volume) && volume > 0;
 
-            // Market must be active, not closed, have valid data, and have volume
-            const isValid = isActive && !isClosed && hasValidSlug && hasValidOutcomes && hasValidPrices && hasVolume;
+            // Don't filter on closed status - just need essential display data
+            const isValid = hasValidSlug && hasValidOutcomes && hasValidPrices && hasNonZeroPrices && hasVolume;
 
             if (!isValid) {
-                console.log(`Filtering out market: ${market.question} - active: ${isActive}, closed: ${isClosed}, slug: ${hasValidSlug}, outcomes: ${hasValidOutcomes}, prices: ${hasValidPrices}, volume: ${hasVolume}`);
+                console.log(`Skipping market: ${market.question} - slug: ${hasValidSlug}, outcomes: ${hasValidOutcomes}, prices: ${hasValidPrices}, nonZeroPrices: ${hasNonZeroPrices}, volume: ${hasVolume}`);
             }
 
             return isValid;
@@ -120,8 +124,12 @@ function getTrendingMarkets(markets, count = 10) {
             const volumeA = parseFloat(a.volume24hr);
             const volumeB = parseFloat(b.volume24hr);
             return volumeB - volumeA;
-        })
-        .slice(0, count);
+        });
+
+    console.log(`Found ${validMarkets.length} valid markets total`);
+
+    // Return up to count markets
+    return validMarkets.slice(0, count);
 }
 
 // UI Functions
@@ -137,29 +145,14 @@ function createMarketCard(market, rank) {
     const outcomes = market.outcomes || ['Yes', 'No'];
     const prices = market.outcomePrices || ['0.5', '0.5'];
 
-    // Debug logging - detailed
-    console.log(`\n=== Market #${rank}: ${market.question} ===`);
-    console.log('Market object keys:', Object.keys(market));
-    console.log('Outcomes (type, value):', typeof outcomes, outcomes);
-    console.log('Prices (type, value):', typeof prices, prices);
-    console.log('Is prices an array?', Array.isArray(prices));
-    if (Array.isArray(prices)) {
-        console.log('Prices length:', prices.length);
-        console.log('Prices[0] (type, value):', typeof prices[0], prices[0]);
-        console.log('Prices[1] (type, value):', typeof prices[1], prices[1]);
-    }
-    console.log('Volume24hr:', market.volume24hr);
-    console.log('Active:', market.active, 'Closed:', market.closed);
-    console.log('Slug:', market.slug);
-
     // Safely get outcome labels and prices
     const outcome1Label = outcomes[0] || 'Yes';
     const outcome2Label = outcomes[1] || 'No';
     const price1 = prices[0] || '0.5';
     const price2 = prices[1] || '0.5';
 
-    console.log('Extracted price1:', price1, 'price2:', price2);
-    console.log('Formatted prices:', formatPrice(price1), formatPrice(price2));
+    // Debug logging - compact
+    console.log(`Market #${rank}: "${market.question}" | Prices: [${price1}, ${price2}] -> [${formatPrice(price1)}, ${formatPrice(price2)}]`);
 
     card.innerHTML = `
         <div class="market-rank">#${rank}</div>
@@ -267,15 +260,16 @@ async function loadTrendingMarkets() {
 
         const trending = getTrendingMarkets(allMarkets, 10);
 
-        console.log(`\n=== Found ${trending.length} trending live markets ===`);
-        console.log('Sorted by volume (descending):');
-        trending.forEach((m, i) => {
-            console.log(`#${i+1}: ${m.question} - Volume: $${m.volume24hr.toFixed(2)}`);
-        });
+        console.log(`\n=== Found ${trending.length} trending markets ===`);
 
         if (trending.length === 0) {
-            throw new Error('No trending markets found with volume data');
+            throw new Error('No valid markets found. Check console for filtering details.');
         }
+
+        console.log('Sorted by volume (descending):');
+        trending.forEach((m, i) => {
+            console.log(`#${i+1}: ${m.question} - Volume: $${m.volume24hr.toFixed(2)} - Prices: ${m.outcomePrices.join(', ')}`);
+        });
 
         markets = trending;
         displayMarkets(trending);
