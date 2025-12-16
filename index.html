@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polymarket Trending Markets Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔥 Polymarket Trending Markets</h1>
+            <p class="subtitle">Top 10 prediction markets by 24-hour volume</p>
+        </header>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Loading trending markets...</p>
+        </div>
+
+        <div id="error" class="error" style="display: none;">
+            <p>Failed to load markets. Please try again later.</p>
+        </div>
+
+        <div id="markets-container" class="markets-container" style="display: none;">
+            <!-- Markets will be dynamically inserted here -->
+        </div>
+
+        <footer>
+            <p>Data powered by <a href="https://polymarket.com" target="_blank">Polymarket</a></p>
+            <p class="last-updated">Last updated: <span id="last-updated-time">--</span></p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
