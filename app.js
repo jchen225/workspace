@@ -98,27 +98,31 @@ function getTrendingMarkets(markets, count = 10) {
     // Be flexible - only require the essential fields we need to display the market
     const validMarkets = markets
         .filter(market => {
-            // Essential requirements only
-            const hasValidSlug = market.slug && market.slug.length > 0;
-            const hasValidOutcomes = market.outcomes && Array.isArray(market.outcomes) && market.outcomes.length >= 2;
-            const hasValidPrices = market.outcomePrices && Array.isArray(market.outcomePrices) && market.outcomePrices.length >= 2;
+            try {
+                // Essential requirements only
+                const hasValidSlug = market.slug && market.slug.length > 0;
+                const hasValidOutcomes = market.outcomes && Array.isArray(market.outcomes) && market.outcomes.length >= 2;
+                const hasValidPrices = market.outcomePrices && Array.isArray(market.outcomePrices) && market.outcomePrices.length >= 2;
 
-            // Check if any price values are non-zero
-            const hasNonZeroPrices = market.outcomePrices &&
-                                     market.outcomePrices.some(p => parseFloat(p) > 0);
+                // Check if any price values are non-zero (must be array first)
+                const hasNonZeroPrices = hasValidPrices && market.outcomePrices.some(p => parseFloat(p) > 0);
 
-            // Check volume
-            const volume = parseFloat(market.volume24hr);
-            const hasVolume = !isNaN(volume) && volume > 0;
+                // Check volume
+                const volume = parseFloat(market.volume24hr);
+                const hasVolume = !isNaN(volume) && volume > 0;
 
-            // Don't filter on closed status - just need essential display data
-            const isValid = hasValidSlug && hasValidOutcomes && hasValidPrices && hasNonZeroPrices && hasVolume;
+                // Don't filter on closed status - just need essential display data
+                const isValid = hasValidSlug && hasValidOutcomes && hasValidPrices && hasNonZeroPrices && hasVolume;
 
-            if (!isValid) {
-                console.log(`Skipping market: ${market.question} - slug: ${hasValidSlug}, outcomes: ${hasValidOutcomes}, prices: ${hasValidPrices}, nonZeroPrices: ${hasNonZeroPrices}, volume: ${hasVolume}`);
+                if (!isValid) {
+                    console.log(`Skipping market: ${market.question} - slug: ${hasValidSlug}, outcomes: ${hasValidOutcomes}, prices: ${hasValidPrices}, nonZeroPrices: ${hasNonZeroPrices}, volume: ${hasVolume}`);
+                }
+
+                return isValid;
+            } catch (error) {
+                console.error(`Error validating market "${market.question}":`, error);
+                return false;
             }
-
-            return isValid;
         })
         .sort((a, b) => {
             const volumeA = parseFloat(a.volume24hr);
