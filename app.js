@@ -36,6 +36,10 @@ function formatPriceChange(change) {
 }
 
 function getMarketUrl(slug) {
+    if (!slug) {
+        console.warn('Market has no slug!');
+        return 'https://polymarket.com';
+    }
     return `https://polymarket.com/event/${slug}`;
 }
 
@@ -89,11 +93,28 @@ async function fetchMarkets() {
 }
 
 function getTrendingMarkets(markets, count = 10) {
-    // Sort by 24-hour volume to get trending markets
+    // Filter for live markets with valid data, then sort by 24-hour volume
     return markets
         .filter(market => {
+            // Check if market is live and active
+            const isActive = market.active === true;
+            const isClosed = market.closed === true;
+            const hasValidSlug = market.slug && market.slug.length > 0;
+            const hasValidOutcomes = market.outcomes && Array.isArray(market.outcomes) && market.outcomes.length >= 2;
+            const hasValidPrices = market.outcomePrices && Array.isArray(market.outcomePrices) && market.outcomePrices.length >= 2;
+
+            // Check volume
             const volume = parseFloat(market.volume24hr);
-            return !isNaN(volume) && volume > 0;
+            const hasVolume = !isNaN(volume) && volume > 0;
+
+            // Market must be active, not closed, have valid data, and have volume
+            const isValid = isActive && !isClosed && hasValidSlug && hasValidOutcomes && hasValidPrices && hasVolume;
+
+            if (!isValid) {
+                console.log(`Filtering out market: ${market.question} - active: ${isActive}, closed: ${isClosed}, slug: ${hasValidSlug}, outcomes: ${hasValidOutcomes}, prices: ${hasValidPrices}, volume: ${hasVolume}`);
+            }
+
+            return isValid;
         })
         .sort((a, b) => {
             const volumeA = parseFloat(a.volume24hr);
@@ -116,11 +137,20 @@ function createMarketCard(market, rank) {
     const outcomes = market.outcomes || ['Yes', 'No'];
     const prices = market.outcomePrices || ['0.5', '0.5'];
 
-    // Debug logging
-    console.log(`Market: ${market.question}`);
-    console.log('Outcomes:', outcomes);
-    console.log('Prices:', prices);
+    // Debug logging - detailed
+    console.log(`\n=== Market #${rank}: ${market.question} ===`);
+    console.log('Market object keys:', Object.keys(market));
+    console.log('Outcomes (type, value):', typeof outcomes, outcomes);
+    console.log('Prices (type, value):', typeof prices, prices);
+    console.log('Is prices an array?', Array.isArray(prices));
+    if (Array.isArray(prices)) {
+        console.log('Prices length:', prices.length);
+        console.log('Prices[0] (type, value):', typeof prices[0], prices[0]);
+        console.log('Prices[1] (type, value):', typeof prices[1], prices[1]);
+    }
     console.log('Volume24hr:', market.volume24hr);
+    console.log('Active:', market.active, 'Closed:', market.closed);
+    console.log('Slug:', market.slug);
 
     // Safely get outcome labels and prices
     const outcome1Label = outcomes[0] || 'Yes';
@@ -128,6 +158,7 @@ function createMarketCard(market, rank) {
     const price1 = prices[0] || '0.5';
     const price2 = prices[1] || '0.5';
 
+    console.log('Extracted price1:', price1, 'price2:', price2);
     console.log('Formatted prices:', formatPrice(price1), formatPrice(price2));
 
     card.innerHTML = `
@@ -231,11 +262,15 @@ async function loadTrendingMarkets() {
             throw new Error('No markets returned from API');
         }
 
+        console.log(`Total markets fetched: ${allMarkets.length}`);
+        console.log('Filtering for live markets with valid data...\n');
+
         const trending = getTrendingMarkets(allMarkets, 10);
-        console.log('Top 10 trending markets:', trending);
+
+        console.log(`\n=== Found ${trending.length} trending live markets ===`);
         console.log('Sorted by volume (descending):');
         trending.forEach((m, i) => {
-            console.log(`#${i+1}: ${m.question} - Volume: ${m.volume24hr}`);
+            console.log(`#${i+1}: ${m.question} - Volume: $${m.volume24hr.toFixed(2)}`);
         });
 
         if (trending.length === 0) {
