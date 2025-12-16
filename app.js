@@ -1,9 +1,11 @@
 // Polymarket API Configuration
 const API_BASE_URL = 'https://gamma-api.polymarket.com';
 const MARKETS_ENDPOINT = '/markets';
+const CORS_PROXY = 'https://corsproxy.io/?';
 
 // State
 let markets = [];
+let useCorsProxy = false;
 
 // Utility Functions
 function formatCurrency(value) {
@@ -33,15 +35,46 @@ function getMarketUrl(slug) {
 
 // API Functions
 async function fetchMarkets() {
-    try {
-        // Fetch active markets, limit to 100 to get a good pool
-        const response = await fetch(`${API_BASE_URL}${MARKETS_ENDPOINT}?limit=100&closed=false`);
+    const url = `${API_BASE_URL}${MARKETS_ENDPOINT}?limit=100&closed=false`;
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+    try {
+        console.log('Attempting to fetch from:', url);
+
+        // Try direct fetch first
+        let response;
+        try {
+            response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                },
+                mode: 'cors'
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+        } catch (directError) {
+            // If direct fetch fails (likely CORS), try with proxy
+            console.log('Direct fetch failed, trying CORS proxy...', directError.message);
+            useCorsProxy = true;
+            const proxyUrl = `${CORS_PROXY}${encodeURIComponent(url)}`;
+            console.log('Fetching from proxy:', proxyUrl);
+
+            response = await fetch(proxyUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error with proxy! status: ${response.status}`);
+            }
         }
 
         const data = await response.json();
+        console.log('Successfully fetched data, number of markets:', data.length);
         return data;
     } catch (error) {
         console.error('Error fetching markets:', error);
@@ -141,7 +174,7 @@ function displayMarkets(markets) {
     document.getElementById('last-updated-time').textContent = now.toLocaleString();
 }
 
-function showError() {
+function showError(message = null) {
     const loading = document.getElementById('loading');
     const error = document.getElementById('error');
     const container = document.getElementById('markets-container');
@@ -149,6 +182,14 @@ function showError() {
     loading.style.display = 'none';
     error.style.display = 'block';
     container.style.display = 'none';
+
+    if (message) {
+        error.innerHTML = `
+            <p>Failed to load markets.</p>
+            <p style="font-size: 0.9rem; margin-top: 10px; opacity: 0.9;">${message}</p>
+            <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: white; color: #ff4444; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Retry</button>
+        `;
+    }
 }
 
 // Main Function
@@ -158,14 +199,30 @@ async function loadTrendingMarkets() {
         const allMarkets = await fetchMarkets();
         console.log(`Fetched ${allMarkets.length} markets`);
 
+        if (!allMarkets || allMarkets.length === 0) {
+            throw new Error('No markets returned from API');
+        }
+
         const trending = getTrendingMarkets(allMarkets, 10);
         console.log('Top 10 trending markets:', trending);
+
+        if (trending.length === 0) {
+            throw new Error('No trending markets found with volume data');
+        }
 
         markets = trending;
         displayMarkets(trending);
     } catch (error) {
         console.error('Failed to load trending markets:', error);
-        showError();
+        let errorMessage = 'Please check your internet connection and try again.';
+
+        if (error.message.includes('CORS')) {
+            errorMessage = 'Browser security blocked the request. Try running with a local server.';
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+
+        showError(errorMessage);
     }
 }
 

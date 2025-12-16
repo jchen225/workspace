@@ -150,15 +150,48 @@ body {
 
 ### Markets Not Loading
 
-1. **Check Console**: Open browser DevTools (F12) and check the Console tab for errors
-2. **CORS Issues**: If running locally, use a local server instead of opening the file directly
-3. **API Status**: Verify the Polymarket API is accessible at https://gamma-api.polymarket.com/markets
+**IMPORTANT**: If you see "Failed to load markets" error, follow these steps:
+
+1. **Use a Local Server** (Most Common Fix)
+   - Opening `index.html` directly in your browser may cause CORS errors
+   - Run a local server instead:
+     ```bash
+     python -m http.server 8000
+     # Then visit http://localhost:8000
+     ```
+
+2. **Check Console for Details**
+   - Open browser DevTools (F12)
+   - Check the Console tab for specific error messages
+   - Look for CORS, network, or API errors
+
+3. **CORS Proxy Fallback**
+   - The app automatically tries to use a CORS proxy if direct fetch fails
+   - Check console to see if proxy is being used
+   - Proxy URL: `https://corsproxy.io/`
+
+4. **API Status**
+   - Verify the Polymarket API is accessible
+   - Test: https://gamma-api.polymarket.com/markets?limit=10&closed=false
+   - If the API is down, wait and retry later
+
+5. **Browser Compatibility**
+   - Ensure you're using a modern browser (Chrome, Firefox, Safari, Edge)
+   - Clear browser cache and reload
+   - Try a different browser if issues persist
+
+### Common Error Messages
+
+- **"Browser security blocked the request"**: Use a local server instead of opening the file directly
+- **"No markets returned from API"**: The Polymarket API might be down or rate-limiting requests
+- **"No trending markets found"**: All markets returned had zero 24h volume (unlikely but possible)
 
 ### Slow Loading
 
 - The dashboard fetches 100 markets to find the top 10 trending
-- Initial load may take 1-2 seconds depending on network speed
+- Initial load may take 2-5 seconds depending on network speed and CORS proxy usage
 - Markets are cached in memory and only refetch every 5 minutes
+- The CORS proxy adds ~1-2 seconds of latency if needed
 
 ## Future Enhancements
 
