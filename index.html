@@ -9,8 +9,19 @@
 <body>
     <div class="container">
         <header>
-            <h1>💎 Ethereum Prediction Markets</h1>
-            <p class="subtitle">Active Ethereum markets on Polymarket</p>
+            <h1>🔍 Polymarket Search Dashboard</h1>
+            <p class="subtitle">Search for prediction markets by keyword</p>
+
+            <div class="search-container">
+                <input
+                    type="text"
+                    id="search-input"
+                    class="search-input"
+                    placeholder="Enter keywords (e.g., Ethereum, Bitcoin, Trump, AI)..."
+                    value="Ethereum"
+                />
+                <button id="search-button" class="search-button">Search</button>
+            </div>
         </header>
 
         <div id="loading" class="loading">
@@ -32,6 +43,6 @@
         </footer>
     </div>
 
-    <script src="app.js?v=12"></script>
+    <script src="app.js?v=13"></script>
 </body>
 </html>

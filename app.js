@@ -6,6 +6,7 @@ const CORS_PROXY = 'https://corsproxy.io/?';
 // State
 let markets = [];
 let useCorsProxy = false;
+let currentSearchKeywords = 'ethereum'; // Default search
 
 // Utility Functions
 function formatCurrency(value) {
@@ -108,29 +109,37 @@ async function fetchMarkets() {
     }
 }
 
-function getEthereumMarkets(markets) {
-    // Filter for active Ethereum-related markets
-    console.log('Filtering for Ethereum markets...');
+function getMarketsByKeywords(markets, keywords) {
+    // Filter for active markets matching the search keywords
+    console.log(`Filtering for markets matching: "${keywords}"...`);
 
-    const ethereumMarkets = markets
+    // Split keywords by comma or space and trim
+    const keywordList = keywords.toLowerCase()
+        .split(/[,\s]+/)
+        .map(k => k.trim())
+        .filter(k => k.length > 0);
+
+    console.log('Searching for keywords:', keywordList);
+
+    const filteredMarkets = markets
         .filter(market => {
             try {
                 // Only require the absolute minimum
                 const hasQuestion = market.question && market.question.length > 0;
                 const hasSlug = market.slug && market.slug.length > 0;
 
-                // Check if market is about Ethereum
+                // Check if market matches any of the keywords
                 const questionLower = market.question.toLowerCase();
-                const isEthereumRelated = questionLower.includes('ethereum') ||
-                                         questionLower.includes('eth') ||
-                                         questionLower.includes('ether');
+                const matchesKeywords = keywordList.some(keyword =>
+                    questionLower.includes(keyword)
+                );
 
                 // Check if market is active (not resolved/closed)
                 const isActive = market.closed !== true;
 
-                console.log(`"${market.question}" - ETH: ${isEthereumRelated}, Active: ${isActive}, Closed: ${market.closed}`);
+                console.log(`"${market.question}" - Matches: ${matchesKeywords}, Active: ${isActive}, Closed: ${market.closed}`);
 
-                if (!isEthereumRelated) {
+                if (!matchesKeywords) {
                     return false;
                 }
 
@@ -192,10 +201,10 @@ function getEthereumMarkets(markets) {
             return volumeB - volumeA;
         });
 
-    console.log(`Found ${ethereumMarkets.length} Ethereum markets`);
+    console.log(`Found ${filteredMarkets.length} markets matching "${keywords}"`);
 
-    // Return all Ethereum markets (no limit)
-    return ethereumMarkets;
+    // Return all matching markets (no limit)
+    return filteredMarkets;
 }
 
 // UI Functions
@@ -336,25 +345,25 @@ async function loadTrendingMarkets() {
         }
 
         console.log(`Total markets fetched: ${allMarkets.length}`);
-        console.log('Filtering for active Ethereum markets...\n');
+        console.log(`Filtering for active markets matching: "${currentSearchKeywords}"...\n`);
 
-        const ethereumMarkets = getEthereumMarkets(allMarkets);
+        const filteredMarkets = getMarketsByKeywords(allMarkets, currentSearchKeywords);
 
-        console.log(`\n=== Found ${ethereumMarkets.length} Ethereum markets ===`);
+        console.log(`\n=== Found ${filteredMarkets.length} markets ===`);
 
-        if (ethereumMarkets.length === 0) {
-            throw new Error('No active Ethereum markets found. Check console for filtering details.');
+        if (filteredMarkets.length === 0) {
+            throw new Error(`No active markets found for "${currentSearchKeywords}". Try different keywords.`);
         }
 
         console.log('Sorted by volume (descending):');
-        ethereumMarkets.forEach((m, i) => {
+        filteredMarkets.forEach((m, i) => {
             const pricesDisplay = Array.isArray(m.outcomePrices) ? m.outcomePrices.join(', ') : 'N/A';
             const volumeDisplay = m.volume24hr != null ? `$${parseFloat(m.volume24hr).toFixed(2)}` : 'N/A';
             console.log(`#${i+1}: ${m.question} - Volume: ${volumeDisplay} - Prices: ${pricesDisplay}`);
         });
 
-        markets = ethereumMarkets;
-        displayMarkets(ethereumMarkets);
+        markets = filteredMarkets;
+        displayMarkets(filteredMarkets);
     } catch (error) {
         console.error('Failed to load trending markets:', error);
         let errorMessage = 'Please check your internet connection and try again.';
@@ -369,9 +378,39 @@ async function loadTrendingMarkets() {
     }
 }
 
+// Search functionality
+function performSearch() {
+    const searchInput = document.getElementById('search-input');
+    const keywords = searchInput.value.trim();
+
+    if (keywords.length === 0) {
+        alert('Please enter at least one keyword to search');
+        return;
+    }
+
+    currentSearchKeywords = keywords;
+    console.log(`\n\n=== NEW SEARCH: "${keywords}" ===\n`);
+    loadTrendingMarkets();
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Dashboard loaded, fetching Ethereum markets...');
+    console.log('Dashboard loaded, fetching markets...');
+
+    // Set up search functionality
+    const searchButton = document.getElementById('search-button');
+    const searchInput = document.getElementById('search-input');
+
+    searchButton.addEventListener('click', performSearch);
+
+    // Allow Enter key to trigger search
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            performSearch();
+        }
+    });
+
+    // Load initial results with default search (Ethereum)
     loadTrendingMarkets();
 
     // Refresh every 5 minutes
