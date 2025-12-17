@@ -151,6 +151,17 @@ function getEthereumMarkets(markets) {
                         try {
                             market.outcomePrices = JSON.parse(market.outcomePrices);
                             console.log(`Parsed outcomePrices from JSON string for "${market.question}":`, market.outcomePrices);
+
+                            // Handle double-stringified arrays - if elements are still strings with quotes
+                            if (Array.isArray(market.outcomePrices) && market.outcomePrices.length > 0) {
+                                market.outcomePrices = market.outcomePrices.map(price => {
+                                    if (typeof price === 'string') {
+                                        // Remove surrounding quotes if present: "\"0.008\"" -> "0.008"
+                                        return price.replace(/^"|"$/g, '');
+                                    }
+                                    return price;
+                                });
+                            }
                         } catch {
                             // Fallback to split
                             market.outcomePrices = market.outcomePrices.split(',').map(p => p.trim());
