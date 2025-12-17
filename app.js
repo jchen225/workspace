@@ -191,7 +191,14 @@ function createMarketCard(market, rank) {
     // Get outcome prices (Yes/No)
     // Note: outcomes and outcomePrices are already arrays from the API
     const outcomes = market.outcomes || ['Yes', 'No'];
-    const prices = market.outcomePrices || ['0.5', '0.5'];
+    let prices = market.outcomePrices || ['0.5', '0.5'];
+
+    // FIX: Handle nested arrays - sometimes outcomePrices comes as [["0.5", "0.5"]]
+    if (Array.isArray(prices) && prices.length > 0 && Array.isArray(prices[0])) {
+        console.log('⚠️ Detected nested array in outcomePrices, flattening...', prices);
+        prices = prices[0]; // Flatten the nested array
+        console.log('After flattening:', prices);
+    }
 
     // Safely get outcome labels and prices
     const outcome1Label = outcomes[0] || 'Yes';
