@@ -108,61 +108,43 @@ async function fetchMarkets() {
 }
 
 function getTrendingMarkets(markets, count = 8) {
-    // Filter for markets with essential valid data, then sort by 24-hour volume
-    // This matches Polymarket's trending section which shows high-volume markets
+    // Filter for markets with minimal required data, then sort by 24-hour volume
+    // Be very permissive - just need enough to display something
+    console.log('Starting market filtering...');
+
     const validMarkets = markets
         .filter(market => {
             try {
-                // Essential requirements only
-                const hasValidSlug = market.slug && market.slug.length > 0;
-
-                // Check outcomes - must be array with 2+ items
-                // Handle both array and string formats
-                let outcomes = market.outcomes;
-                if (typeof outcomes === 'string') {
-                    outcomes = outcomes.split(',');
-                }
-                const hasValidOutcomes = outcomes && Array.isArray(outcomes) && outcomes.length >= 2;
-
-                // Check outcomePrices - handle both array and string formats
-                let outcomePrices = market.outcomePrices;
-                if (typeof outcomePrices === 'string') {
-                    outcomePrices = outcomePrices.split(',');
-                }
-
-                if (!outcomePrices || !Array.isArray(outcomePrices)) {
-                    console.log(`Skipping "${market.question}": outcomePrices is ${typeof market.outcomePrices} = ${JSON.stringify(market.outcomePrices)}`);
-                    return false;
-                }
-
-                const hasValidPrices = outcomePrices.length >= 2;
-
-                // Check if any price values are non-zero
-                let hasNonZeroPrices = false;
-                if (hasValidPrices) {
-                    hasNonZeroPrices = outcomePrices.some(p => {
-                        const num = parseFloat(p);
-                        return !isNaN(num) && num > 0;
-                    });
-                }
-
-                // Check volume
+                // Only require the absolute minimum
+                const hasQuestion = market.question && market.question.length > 0;
+                const hasSlug = market.slug && market.slug.length > 0;
                 const volume = parseFloat(market.volume24hr);
                 const hasVolume = !isNaN(volume) && volume > 0;
 
-                // Normalize the market data (convert strings to arrays)
-                if (typeof market.outcomes === 'string') {
-                    market.outcomes = market.outcomes.split(',');
+                // Normalize the market data (convert strings to arrays if needed)
+                if (market.outcomes) {
+                    if (typeof market.outcomes === 'string') {
+                        market.outcomes = market.outcomes.split(',').map(o => o.trim());
+                    }
                 }
-                if (typeof market.outcomePrices === 'string') {
-                    market.outcomePrices = market.outcomePrices.split(',');
+                if (market.outcomePrices) {
+                    if (typeof market.outcomePrices === 'string') {
+                        market.outcomePrices = market.outcomePrices.split(',').map(p => p.trim());
+                    }
                 }
 
-                // Don't filter on closed status - just need essential display data
-                const isValid = hasValidSlug && hasValidOutcomes && hasValidPrices && hasNonZeroPrices && hasVolume;
+                // Set defaults if missing
+                if (!market.outcomes || !Array.isArray(market.outcomes) || market.outcomes.length < 2) {
+                    market.outcomes = ['Yes', 'No'];
+                }
+                if (!market.outcomePrices || !Array.isArray(market.outcomePrices) || market.outcomePrices.length < 2) {
+                    market.outcomePrices = ['0.5', '0.5'];
+                }
+
+                const isValid = hasQuestion && hasSlug && hasVolume;
 
                 if (!isValid) {
-                    console.log(`Skipping market: ${market.question} - slug: ${hasValidSlug}, outcomes: ${hasValidOutcomes}, prices: ${hasValidPrices}, nonZeroPrices: ${hasNonZeroPrices}, volume: ${hasVolume}`);
+                    console.log(`Skipping: "${market.question}" - question: ${hasQuestion}, slug: ${hasSlug}, volume: ${hasVolume} (${market.volume24hr})`);
                 }
 
                 return isValid;
