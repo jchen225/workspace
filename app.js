@@ -107,23 +107,31 @@ async function fetchMarkets() {
     }
 }
 
-function getTrendingMarkets(markets, count = 8) {
-    // Filter for markets with minimal required data, then sort by 24-hour volume
-    // Be very permissive - just need enough to display something
-    console.log('Starting market filtering...');
+function getEthereumMarkets(markets) {
+    // Filter for active Ethereum-related markets
+    console.log('Filtering for Ethereum markets...');
 
-    const validMarkets = markets
+    const ethereumMarkets = markets
         .filter(market => {
             try {
                 // Only require the absolute minimum
                 const hasQuestion = market.question && market.question.length > 0;
                 const hasSlug = market.slug && market.slug.length > 0;
-                const volume = parseFloat(market.volume24hr);
-                const hasVolume = !isNaN(volume) && volume > 0;
 
-                // DEBUG: Log original outcomePrices
-                console.log(`\n--- ${market.question} ---`);
-                console.log('Original outcomePrices:', market.outcomePrices, 'Type:', typeof market.outcomePrices, 'IsArray:', Array.isArray(market.outcomePrices));
+                // Check if market is about Ethereum
+                const questionLower = market.question.toLowerCase();
+                const isEthereumRelated = questionLower.includes('ethereum') ||
+                                         questionLower.includes('eth') ||
+                                         questionLower.includes('ether');
+
+                // Check if market is active (not resolved/closed)
+                const isActive = market.closed !== true;
+
+                console.log(`"${market.question}" - ETH: ${isEthereumRelated}, Active: ${isActive}, Closed: ${market.closed}`);
+
+                if (!isEthereumRelated) {
+                    return false;
+                }
 
                 // Normalize the market data (convert strings to arrays if needed)
                 if (market.outcomes) {
@@ -133,34 +141,19 @@ function getTrendingMarkets(markets, count = 8) {
                 }
                 if (market.outcomePrices) {
                     if (typeof market.outcomePrices === 'string') {
-                        console.log('Converting outcomePrices from string to array...');
                         market.outcomePrices = market.outcomePrices.split(',').map(p => p.trim());
-                        console.log('After conversion:', market.outcomePrices);
                     }
                 }
 
-                // DEBUG: Before setting defaults
-                console.log('After normalization, outcomePrices:', market.outcomePrices);
-                console.log('Is array?', Array.isArray(market.outcomePrices));
-                console.log('Length:', market.outcomePrices ? market.outcomePrices.length : 'N/A');
-
-                // Set defaults if missing - BE VERY CAREFUL HERE
+                // Set defaults if missing
                 if (!market.outcomes || !Array.isArray(market.outcomes) || market.outcomes.length < 2) {
-                    console.log('Setting default outcomes');
                     market.outcomes = ['Yes', 'No'];
                 }
                 if (!market.outcomePrices || !Array.isArray(market.outcomePrices) || market.outcomePrices.length < 2) {
-                    console.log('⚠️ Setting default outcomePrices to [0.5, 0.5] - Original was:', market.outcomePrices);
                     market.outcomePrices = ['0.5', '0.5'];
-                } else {
-                    console.log('✓ Keeping actual outcomePrices:', market.outcomePrices);
                 }
 
-                const isValid = hasQuestion && hasSlug && hasVolume;
-
-                if (!isValid) {
-                    console.log(`Skipping: "${market.question}" - question: ${hasQuestion}, slug: ${hasSlug}, volume: ${hasVolume} (${market.volume24hr})`);
-                }
+                const isValid = hasQuestion && hasSlug && isEthereumRelated && isActive;
 
                 return isValid;
             } catch (error) {
@@ -169,15 +162,16 @@ function getTrendingMarkets(markets, count = 8) {
             }
         })
         .sort((a, b) => {
-            const volumeA = parseFloat(a.volume24hr);
-            const volumeB = parseFloat(b.volume24hr);
+            // Sort by volume as secondary criteria
+            const volumeA = parseFloat(a.volume24hr) || 0;
+            const volumeB = parseFloat(b.volume24hr) || 0;
             return volumeB - volumeA;
         });
 
-    console.log(`Found ${validMarkets.length} valid markets total`);
+    console.log(`Found ${ethereumMarkets.length} Ethereum markets`);
 
-    // Return up to count markets
-    return validMarkets.slice(0, count);
+    // Return all Ethereum markets (no limit)
+    return ethereumMarkets;
 }
 
 // UI Functions
@@ -311,24 +305,24 @@ async function loadTrendingMarkets() {
         }
 
         console.log(`Total markets fetched: ${allMarkets.length}`);
-        console.log('Filtering for trending markets with valid data...\n');
+        console.log('Filtering for active Ethereum markets...\n');
 
-        const trending = getTrendingMarkets(allMarkets, 8);
+        const ethereumMarkets = getEthereumMarkets(allMarkets);
 
-        console.log(`\n=== Found ${trending.length} trending markets ===`);
+        console.log(`\n=== Found ${ethereumMarkets.length} Ethereum markets ===`);
 
-        if (trending.length === 0) {
-            throw new Error('No valid markets found. Check console for filtering details.');
+        if (ethereumMarkets.length === 0) {
+            throw new Error('No active Ethereum markets found. Check console for filtering details.');
         }
 
         console.log('Sorted by volume (descending):');
-        trending.forEach((m, i) => {
+        ethereumMarkets.forEach((m, i) => {
             const pricesDisplay = Array.isArray(m.outcomePrices) ? m.outcomePrices.join(', ') : 'N/A';
             console.log(`#${i+1}: ${m.question} - Volume: $${m.volume24hr.toFixed(2)} - Prices: ${pricesDisplay}`);
         });
 
-        markets = trending;
-        displayMarkets(trending);
+        markets = ethereumMarkets;
+        displayMarkets(ethereumMarkets);
     } catch (error) {
         console.error('Failed to load trending markets:', error);
         let errorMessage = 'Please check your internet connection and try again.';
@@ -345,7 +339,7 @@ async function loadTrendingMarkets() {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Dashboard loaded, fetching trending markets...');
+    console.log('Dashboard loaded, fetching Ethereum markets...');
     loadTrendingMarkets();
 
     // Refresh every 5 minutes
