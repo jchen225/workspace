@@ -93,9 +93,9 @@ async function fetchMarkets() {
     }
 }
 
-function getTrendingMarkets(markets, count = 10) {
+function getTrendingMarkets(markets, count = 8) {
     // Filter for markets with essential valid data, then sort by 24-hour volume
-    // Be flexible - only require the essential fields we need to display the market
+    // This matches Polymarket's trending section which shows high-volume markets
     const validMarkets = markets
         .filter(market => {
             try {
@@ -275,9 +275,9 @@ async function loadTrendingMarkets() {
         }
 
         console.log(`Total markets fetched: ${allMarkets.length}`);
-        console.log('Filtering for live markets with valid data...\n');
+        console.log('Filtering for trending markets with valid data...\n');
 
-        const trending = getTrendingMarkets(allMarkets, 10);
+        const trending = getTrendingMarkets(allMarkets, 8);
 
         console.log(`\n=== Found ${trending.length} trending markets ===`);
 

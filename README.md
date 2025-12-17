@@ -1,13 +1,13 @@
 # Polymarket Trending Markets Dashboard
 
-A simple, responsive dashboard that displays the top 10 trending prediction markets from Polymarket based on 24-hour trading volume.
+A simple, responsive dashboard that displays the top 8 trending prediction markets from Polymarket based on 24-hour trading volume.
 
 ![Dashboard Preview](preview.png)
 
 ## Features
 
 - 🔥 **Real-time Data**: Fetches live market data from Polymarket's Gamma API
-- 📊 **Top 10 Trending**: Displays markets sorted by 24-hour trading volume
+- 📊 **Top 8 Trending**: Displays markets sorted by 24-hour trading volume
 - 💹 **Market Statistics**: Shows volume, liquidity, and price changes
 - 🎨 **Beautiful UI**: Clean, modern design with responsive layout
 - ♻️ **Auto-refresh**: Updates every 5 minutes automatically
@@ -70,7 +70,7 @@ The dashboard fetches data from the Polymarket Gamma API:
 
 ### Trending Algorithm
 
-Markets are sorted by their 24-hour trading volume (`volume24hr`) to determine what's trending. The top 10 markets are displayed on the dashboard.
+Markets are sorted by their 24-hour trading volume (`volume24hr`) to determine what's trending. The top 8 markets are displayed on the dashboard.
 
 ### Display Information
 
@@ -121,10 +121,10 @@ Works on all modern browsers:
 
 ### Change Number of Markets
 
-Edit `app.js` line where `loadTrendingMarkets()` is called:
+Edit `app.js` line where `getTrendingMarkets()` is called:
 
 ```javascript
-const trending = getTrendingMarkets(allMarkets, 20); // Show 20 instead of 10
+const trending = getTrendingMarkets(allMarkets, 15); // Show 15 instead of 8
 ```
 
 ### Change Refresh Interval
@@ -188,7 +188,7 @@ body {
 
 ### Slow Loading
 
-- The dashboard fetches 100 markets to find the top 10 trending
+- The dashboard fetches 200 markets to find the top 8 trending
 - Initial load may take 2-5 seconds depending on network speed and CORS proxy usage
 - Markets are cached in memory and only refetch every 5 minutes
 - The CORS proxy adds ~1-2 seconds of latency if needed
