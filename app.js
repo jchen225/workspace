@@ -121,6 +121,10 @@ function getTrendingMarkets(markets, count = 8) {
                 const volume = parseFloat(market.volume24hr);
                 const hasVolume = !isNaN(volume) && volume > 0;
 
+                // DEBUG: Log original outcomePrices
+                console.log(`\n--- ${market.question} ---`);
+                console.log('Original outcomePrices:', market.outcomePrices, 'Type:', typeof market.outcomePrices, 'IsArray:', Array.isArray(market.outcomePrices));
+
                 // Normalize the market data (convert strings to arrays if needed)
                 if (market.outcomes) {
                     if (typeof market.outcomes === 'string') {
@@ -129,16 +133,27 @@ function getTrendingMarkets(markets, count = 8) {
                 }
                 if (market.outcomePrices) {
                     if (typeof market.outcomePrices === 'string') {
+                        console.log('Converting outcomePrices from string to array...');
                         market.outcomePrices = market.outcomePrices.split(',').map(p => p.trim());
+                        console.log('After conversion:', market.outcomePrices);
                     }
                 }
 
-                // Set defaults if missing
+                // DEBUG: Before setting defaults
+                console.log('After normalization, outcomePrices:', market.outcomePrices);
+                console.log('Is array?', Array.isArray(market.outcomePrices));
+                console.log('Length:', market.outcomePrices ? market.outcomePrices.length : 'N/A');
+
+                // Set defaults if missing - BE VERY CAREFUL HERE
                 if (!market.outcomes || !Array.isArray(market.outcomes) || market.outcomes.length < 2) {
+                    console.log('Setting default outcomes');
                     market.outcomes = ['Yes', 'No'];
                 }
                 if (!market.outcomePrices || !Array.isArray(market.outcomePrices) || market.outcomePrices.length < 2) {
+                    console.log('⚠️ Setting default outcomePrices to [0.5, 0.5] - Original was:', market.outcomePrices);
                     market.outcomePrices = ['0.5', '0.5'];
+                } else {
+                    console.log('✓ Keeping actual outcomePrices:', market.outcomePrices);
                 }
 
                 const isValid = hasQuestion && hasSlug && hasVolume;
