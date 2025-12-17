@@ -86,6 +86,20 @@ async function fetchMarkets() {
 
         const data = await response.json();
         console.log('Successfully fetched data, number of markets:', data.length);
+
+        // Debug: Log first market structure
+        if (data.length > 0) {
+            console.log('Sample market structure:', {
+                question: data[0].question,
+                outcomes: data[0].outcomes,
+                outcomePrices: data[0].outcomePrices,
+                outcomePricesType: typeof data[0].outcomePrices,
+                isArray: Array.isArray(data[0].outcomePrices),
+                volume24hr: data[0].volume24hr,
+                slug: data[0].slug
+            });
+        }
+
         return data;
     } catch (error) {
         console.error('Error fetching markets:', error);
@@ -103,20 +117,30 @@ function getTrendingMarkets(markets, count = 8) {
                 const hasValidSlug = market.slug && market.slug.length > 0;
 
                 // Check outcomes - must be array with 2+ items
-                const hasValidOutcomes = market.outcomes &&
-                                        Array.isArray(market.outcomes) &&
-                                        market.outcomes.length >= 2;
+                // Handle both array and string formats
+                let outcomes = market.outcomes;
+                if (typeof outcomes === 'string') {
+                    outcomes = outcomes.split(',');
+                }
+                const hasValidOutcomes = outcomes && Array.isArray(outcomes) && outcomes.length >= 2;
 
-                // Check outcomePrices - must be array with 2+ items
-                if (!market.outcomePrices || !Array.isArray(market.outcomePrices)) {
+                // Check outcomePrices - handle both array and string formats
+                let outcomePrices = market.outcomePrices;
+                if (typeof outcomePrices === 'string') {
+                    outcomePrices = outcomePrices.split(',');
+                }
+
+                if (!outcomePrices || !Array.isArray(outcomePrices)) {
+                    console.log(`Skipping "${market.question}": outcomePrices is ${typeof market.outcomePrices} = ${JSON.stringify(market.outcomePrices)}`);
                     return false;
                 }
-                const hasValidPrices = market.outcomePrices.length >= 2;
 
-                // Check if any price values are non-zero (only call .some() if array confirmed)
+                const hasValidPrices = outcomePrices.length >= 2;
+
+                // Check if any price values are non-zero
                 let hasNonZeroPrices = false;
                 if (hasValidPrices) {
-                    hasNonZeroPrices = market.outcomePrices.some(p => {
+                    hasNonZeroPrices = outcomePrices.some(p => {
                         const num = parseFloat(p);
                         return !isNaN(num) && num > 0;
                     });
@@ -125,6 +149,14 @@ function getTrendingMarkets(markets, count = 8) {
                 // Check volume
                 const volume = parseFloat(market.volume24hr);
                 const hasVolume = !isNaN(volume) && volume > 0;
+
+                // Normalize the market data (convert strings to arrays)
+                if (typeof market.outcomes === 'string') {
+                    market.outcomes = market.outcomes.split(',');
+                }
+                if (typeof market.outcomePrices === 'string') {
+                    market.outcomePrices = market.outcomePrices.split(',');
+                }
 
                 // Don't filter on closed status - just need essential display data
                 const isValid = hasValidSlug && hasValidOutcomes && hasValidPrices && hasNonZeroPrices && hasVolume;
