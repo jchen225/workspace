@@ -186,7 +186,7 @@ function getMarketsByKeywords(markets, keywords) {
                     market.outcomePrices = ['0.5', '0.5'];
                 }
 
-                const isValid = hasQuestion && hasSlug && isEthereumRelated && isActive;
+                const isValid = hasQuestion && hasSlug && matchesKeywords && isActive;
 
                 return isValid;
             } catch (error) {
