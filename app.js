@@ -9,6 +9,7 @@ let useCorsProxy = false;
 
 // Utility Functions
 function formatCurrency(value) {
+    if (value == null) return '$0.00';
     const num = parseFloat(value);
     if (isNaN(num)) return '$0.00';
 
@@ -162,9 +163,9 @@ function getEthereumMarkets(markets) {
             }
         })
         .sort((a, b) => {
-            // Sort by volume as secondary criteria
-            const volumeA = parseFloat(a.volume24hr) || 0;
-            const volumeB = parseFloat(b.volume24hr) || 0;
+            // Sort by volume (handle undefined/null values)
+            const volumeA = a.volume24hr != null ? parseFloat(a.volume24hr) : 0;
+            const volumeB = b.volume24hr != null ? parseFloat(b.volume24hr) : 0;
             return volumeB - volumeA;
         });
 
@@ -318,7 +319,8 @@ async function loadTrendingMarkets() {
         console.log('Sorted by volume (descending):');
         ethereumMarkets.forEach((m, i) => {
             const pricesDisplay = Array.isArray(m.outcomePrices) ? m.outcomePrices.join(', ') : 'N/A';
-            console.log(`#${i+1}: ${m.question} - Volume: $${m.volume24hr.toFixed(2)} - Prices: ${pricesDisplay}`);
+            const volumeDisplay = m.volume24hr != null ? `$${parseFloat(m.volume24hr).toFixed(2)}` : 'N/A';
+            console.log(`#${i+1}: ${m.question} - Volume: ${volumeDisplay} - Prices: ${pricesDisplay}`);
         });
 
         markets = ethereumMarkets;
