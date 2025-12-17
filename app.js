@@ -188,11 +188,18 @@ function createMarketCard(market, rank) {
     const outcomes = market.outcomes || ['Yes', 'No'];
     let prices = market.outcomePrices || ['0.5', '0.5'];
 
-    // FIX: Handle nested arrays - sometimes outcomePrices comes as [["0.5", "0.5"]]
-    if (Array.isArray(prices) && prices.length > 0 && Array.isArray(prices[0])) {
+    // FIX: Handle nested arrays - sometimes outcomePrices comes as [["0.5", "0.5"]] or even deeper
+    // Keep flattening while the first element is an array
+    while (Array.isArray(prices) && prices.length > 0 && Array.isArray(prices[0])) {
         console.log('⚠️ Detected nested array in outcomePrices, flattening...', prices);
-        prices = prices[0]; // Flatten the nested array
+        prices = prices[0]; // Flatten one level
         console.log('After flattening:', prices);
+    }
+
+    // Verify we have valid prices
+    if (!Array.isArray(prices) || prices.length < 2) {
+        console.warn('Invalid prices after flattening, using defaults:', prices);
+        prices = ['0.5', '0.5'];
     }
 
     // Safely get outcome labels and prices
@@ -202,7 +209,7 @@ function createMarketCard(market, rank) {
     const price2 = prices[1] || '0.5';
 
     // Debug logging - compact
-    console.log(`Market #${rank}: "${market.question}" | Prices: [${price1}, ${price2}] -> [${formatPrice(price1)}, ${formatPrice(price2)}]`);
+    console.log(`Market #${rank}: "${market.question}" | Raw prices: ${JSON.stringify(market.outcomePrices)} | Extracted: [${price1}, ${price2}] -> [${formatPrice(price1)}, ${formatPrice(price2)}]`);
 
     card.innerHTML = `
         <div class="market-rank">#${rank}</div>
